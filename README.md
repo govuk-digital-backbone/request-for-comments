@@ -41,7 +41,7 @@ longer relevant, or was not selected for implementation.
 Anyone can submit a proposal by creating a pull request. The DBB team is responsible for allocating RFC numbers and will
 review all proposals. Please note that the team may choose not to allocate a number if the proposal is not within the
 scope of the Digital Backbone.
-See the [template for more details](rfcs/dbb-rfcXXX-template.md).
+See the [template for more details](rfcs/XXX-template.md).
 
 ## Editing past RFCs
 
