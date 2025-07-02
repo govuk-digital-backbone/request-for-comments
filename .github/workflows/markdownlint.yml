@@ -1,0 +1,12 @@
+name: markdownlint
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DavidAnson/markdownlint-cli2-action@v20
+      with:
+        globs: '**/*.md'
