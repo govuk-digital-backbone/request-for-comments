@@ -1,7 +1,7 @@
 ---
 status: proposed
 implementation: proposed
-last_reviewed: 2025-07-07
+last_reviewed: 2025-07-09
 notes:
 ---
 
@@ -118,9 +118,12 @@ This RFC defines a service-to-service authentication mechanism using:
     - Long lifetime is anything over 300 seconds (five minutes).
     - If `exp` not set, Servers MUST enforce a short lifetime for JWTs (recommended less than or equal to 300 seconds).
     - Clients SHOULD set a short lifetime `exp` header (recommended less than or equal to 300 seconds).
+    - `exp` SHOULD NOT sbeet greater than one year (epoch + 31536000 seconds).
+
+1. **Server-Provisioned**
+
     - If clients cannot manage their own asymmetric cryptography, servers MAY want to create long lifetime tokens:
         - Servers SHOULD create a key pair per client.
-        - Servers SHOULD NOT set `exp` greater than one year (epoch + 31536000 seconds).
 
 ## Examples
 
