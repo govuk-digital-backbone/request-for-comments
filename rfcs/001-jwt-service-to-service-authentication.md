@@ -9,71 +9,118 @@ notes:
 
 ## Summary
 
-This RFC proposes a service-to-service authentication scheme using JSON Web Tokens (JWTs). It enables secure,
-sender-constrained API calls in decentralised systems, allowing services to authenticate requests using cryptographic
-proofs linked to their DID documents or JWK thumbprints.
+This RFC proposes a service-to-service authentication scheme using JSON Web Tokens (JWTs) to enable secure,
+sender-constrained API calls in decentralised systems. It introduces a mechanism where services authenticate
+requests using cryptographic proofs linked to their Decentralised Identifiers (DIDs) or JSON Web Key (JWK)
+thumbprints. This approach aims to simplify key rotation, support delegation, and strengthen API security.
 
 ## Problem
 
-Traditional service authentication models often rely on centralised PKI (e.g. X.509 certificates) or static API keys.
-These approaches:  
+Current service authentication models (e.g., X.509 certificates, API keys) have limitations:
 
-- Do not align with decentralised identity ecosystems.  
-- Are cumbersome for key rotation and delegation.  
-- Lack sender-constrained token protection, leaving APIs vulnerable to token replay.  
+- Centralised trust: They rely on centralised Public Key Infrastructure (PKI) hierarchies that don't align with
+decentralised identity models.
+- Operational friction: Static API keys and certificates make key rotation and delegation cumbersome.
+- Replay risk: Traditional Bearer tokens are not sender-constrained, leaving APIs vulnerable to misuse if a token is intercepted.
+- Fragmentation across government and public sector services: Different departments adopt inconsistent authentication
+patterns, requiring clients to implement bespoke logic and manage separate credentials for each API.
+- Client credential management: Managing multiple API-specific keys or key pairs adds overhead and duplication and raises
+the likelihood of scaling and management issues for clients.
+- Integration barriers: A lack of standardisation drives up integration effort, blocks reuse of shared client libraries,
+and increases time-to-value for consuming APIs.
 
-There is a need for a decentralised, cryptographically verifiable mechanism that allows services to authenticate
-API calls while using DID allows for key rotation and delegation.
+## Background
+
+- JSON Web Token (JWT): A compact, URL-safe token format used for transmitting claims between parties, often signed
+with asymmetric keys, see [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519).
+- Decentralised Identifier (DID): A W3C standard for self-sovereign identifiers, resolved via `/.well-known/did.json`
+or other DID methods, see [W3C DID Core Specification](https://www.w3.org/TR/did-core/).
+- JSON Web Key (JWK): A JSON representation of cryptographic keys, see [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517)
+- DPoP (Demonstrating Proof of Possession): An OAuth 2.0 extension for binding tokens to sender keys, preventing replay,
+see [RFC 7800](https://datatracker.ietf.org/doc/html/rfc7800).
 
 ## Proposal
 
 This RFC defines a service-to-service authentication mechanism using:  
 
 1. **DIDs as Service Identities**
-   - Each service SHOULD have a DID (e.g. `did:web:forms.service.gov.uk`) and expose a DID document with one or more
-verification methods.  
 
-2. **JWTs for Proof-of-Possession**
-   - API requests MUST include a JWT, either as:
-     - Bearer token - [RFC 6750: The OAuth 2.0 Authorization Framework: Bearer Token Usage](https://www.rfc-editor.org/rfc/rfc6750#section-2.1)
-     - `DPoP` header - [RFC 9449: OAuth 2.0 Demonstrating Proof-of-Possession (DPoP)](https://datatracker.ietf.org/doc/html/rfc9449)
-   - The JWT header MUST include:
-     - `typ`: A field with the value `dpop+jwt` or `JWT`.
-     - `alg`: An identifier for a JWS asymmetric digital signature algorithm.
-   - The JWT header MAY include:
-     - `jwk`: Represents the public key chosen by the client in JSON Web Key.
-     - `kid`: A hint indicating which key the client used to generate the token signature.
-   - The JWT payload MUST include at least:
-     - `jti`: Unique identifier for the JWT.
-     - `htu`: The HTTP target URI of the API call (e.g. `https://api.notifications.service.gov.uk/v2/notifications/email`).
-     - `htm`: The HTTP method (e.g. `POST`).
-     - `iat`: Issued-at timestamp (UNIX time).
-   - The JWT payload SHOULD include:
-     - `iss`: The caller as a `https://` plus authority (e.g. `https://forms.service.gov.uk`) or DID urn (e.g. `did:web:forms.service.gov.uk`).
-     - `exp`: Expiry time (UNIX time).
-     - `cnf`: A JSON object and the members of that object identify the proof-of-possession key.
+    - Each service SHOULD have a DID (e.g. `did:web:forms.service.gov.uk`) and expose a DID document with one or more
+    verification methods.  
 
-3. **API Endpoint Validation**
-   - On receiving a request, the API server:
-     - Checks the caller’s DID or the calculated JWK thumbprint is known.
-     - If required, fetching the caller’s DID document.
-     - Uses the `jwk` header or locates the public key matching the `kid` in the JWT header.
-     - Verifies the JWT signature using this key.
-     - Validates `htu` matches the expected URI prefix for the API call.
-     - Validates `htm` matches the method for the API call.
-     - Rejects requests with invalid or expired JWTs.
+1. **JWTs for Proof-of-Possession**
 
-4. **API Response**
-   - On successful validation, APIs MAY return additional information derived from the caller’s DID document.
+    - API requests MUST include a JWT, either as:
+        - Bearer token - [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750#section-2.1)
+        - `DPoP` header - [RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449)
+    - The JWT header MUST include:
+        - `typ`: A field with the value `dpop+jwt` or `JWT`.
+        - `alg`: An identifier for a JWS asymmetric digital signature algorithm.
+    - The JWT header MAY include:
+        - `jwk`: Represents the public key chosen by the client in JSON Web Key.
+        - `kid`: A hint indicating which key the client used to generate the token signature.
+    - The JWT payload MUST include at least:
+        - `jti`: Unique identifier for the JWT.
+        - `iat`: Issued-at timestamp (UNIX time).
+    - The JWT payload MUST include either:
+        - `htu` and `htm`
+            - `htu`: The HTTP target URI of the API call (e.g. `https://api.notifications.service.gov.uk/v2/notifications/email`).
+            - `htm`: The HTTP method (e.g. `POST`).  
 
-5. **Security Considerations**
-   - Servers MUST validate `htu` and `htm` to prevent replay.
-   - Servers MUST enforce a short lifetime for JWTs (recommended less than or equal to 300 seconds) if `exp` not set.
-   - Servers SHOULD utilise the DID or JWK thumbprint for authorisation.
-   - Servers SHOULD support both bearer and DPoP methods.
-   - Servers SHOULD support `cache-control` headers to understand when to refetch updated `did.json` files.
-   - Callers SHOULD set a short lifetime `exp` header (recommended less than or equal to 300 seconds).
-   - Servers MAY authorise DIDs by patterns (e.g. `/^(https:\/\/|did:web:)[a-z0-9\-\.]+\.gov\.uk(\/|:|$)/i`).
+        or
+        - `aud`: The audience as scheme, authority and path (heirarchical part) (e.g. `https://api.notifications.service.gov.uk/v2/notifications/email`)
+                or DID urn (e.g. `did:web:api.notifications.service.gov.uk:v2:notifications`).
+    - The JWT payload SHOULD include:
+        - `iss`: The client as scheme, authority and path (heirarchical part) (e.g. `https://forms.service.gov.uk/api/`)
+                or DID urn (e.g. `did:web:forms.service.gov.uk%3A443:api`).
+        - `exp`: Expiry time (UNIX time).
+        - `cnf`: A JSON object and the members of that object identify the proof-of-possession key.
+
+1. **API Endpoint Validation**
+
+    - On receiving a request, the API server:
+        - Checks the client's DID or the calculated JWK Thumbprint
+            ([RFC 7638](https://www.rfc-editor.org/rfc/rfc7638.html)) is known and valid.
+        - If required, fetching the client's DID document.
+        - Uses the `jwk` header or locates the public key matching the `kid` in the JWT header.
+        - Verifies the JWT signature using the public key.
+        - Either;
+            - Validates `htu` matches the expected URI prefix for the API call.
+            - Validates `htm` matches the method for the API call.
+        - Or;
+            - Validates `aud` matches the requested actions.
+        - Rejects requests with invalid or expired JWTs.
+
+1. **API Authorisation**
+
+    - Where typically a server would give something (bearer token or client ID and secret) to a client, this
+    mechanism means clients should give something (either a DID or JWK Thumbprint) for the server to trust.
+    - Servers SHOULD support both bearer and DPoP methods.
+    - Servers SHOULD utilise the DID or JWK Thumbprint for authorisation.
+    - Servers MAY authorise DIDs by patterns (e.g. `/^(https:\/\/|did:web:)[a-z0-9\-\.]+\.gov\.uk(\/|:|$)/i`).
+
+1. **API Response**
+
+    - On successful validation, APIs MAY return additional information derived from the client's DID document.
+
+1. **Security Considerations**
+
+    - Servers MUST validate `htu` and `htm`, or `aud`, to prevent misuse.
+    - Servers MUST compute the JWT signature and compare with given JWT signature.
+    - Servers MAY implement a revocation or deny list of `jti`, `kid`, JWK Thumbprints, or DIDs.
+
+1. **Caching**
+
+    - Servers SHOULD support `cache-control` headers to understand when to refetch updated `did.json` files.
+
+1. **Long Lifetime**
+
+    - Long lifetime is anything over 300 seconds (five minutes).
+    - If `exp` not set, Servers MUST enforce a short lifetime for JWTs (recommended less than or equal to 300 seconds).
+    - Clients SHOULD set a short lifetime `exp` header (recommended less than or equal to 300 seconds).
+    - If clients cannot manage their own asymmetric cryptography, servers MAY want to create long lifetime tokens:
+        - Servers SHOULD create a key pair per client.
+        - Servers SHOULD NOT set `exp` greater than one year (epoch + 31536000 seconds).
 
 ## Examples
 
@@ -222,6 +269,8 @@ sequenceDiagram
 ## References
 
 - [RFC 6750: The OAuth 2.0 Authorization Framework: Bearer Token Usage](https://www.rfc-editor.org/rfc/rfc6750)
+- [RFC 7517: JSON Web Key (JWK)](https://datatracker.ietf.org/doc/html/rfc7517)
+- [RFC 7519: JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519)
 - [RFC 7638: JSON Web Key (JWK) Thumbprint](https://datatracker.ietf.org/doc/html/rfc7638)
 - [RFC 7800: Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)](https://datatracker.ietf.org/doc/html/rfc7800)
 - [RFC 9449: OAuth 2.0 Demonstrating Proof-of-Possession (DPoP)](https://datatracker.ietf.org/doc/html/rfc9449)
