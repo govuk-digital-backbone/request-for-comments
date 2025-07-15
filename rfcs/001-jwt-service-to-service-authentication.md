@@ -118,7 +118,7 @@ This RFC defines a service-to-service authentication mechanism using:
     - Long lifetime is anything over 300 seconds (five minutes).
     - If `exp` not set, Servers MUST enforce a short lifetime for JWTs (recommended less than or equal to 300 seconds).
     - Clients SHOULD set a short lifetime `exp` header (recommended less than or equal to 300 seconds).
-    - `exp` SHOULD NOT sbeet greater than one year (epoch + 31536000 seconds).
+    - `exp` SHOULD NOT be greater than one year (epoch + 31536000 seconds).
 
 1. **Server-Provisioned**
 
@@ -137,8 +137,8 @@ pZCI6ImV4YW1wbGUtMSJ9.eyJpc3MiOiJkaWQ6d2ViOmZvcm1zLnNlcnZpY2U
 uZ292LnVrIiwianRpIjoiNTA0ZDJhZjItODI2My00ZTUyLWJlNjUtOGNlNzVh
 ZmYxNWQyIiwiaHR1IjoiaHR0cHM6Ly9hcGkubm90aWZpY2F0aW9ucy5zZXJ2a
 WNlLmdvdi51ay92Mi9ub3RpZmljYXRpb25zL2VtYWlsIiwiaHRtIjoiUE9TVC
-IsImlhdCI6MTc1MTg5MjY2NH0.DmTZPDHbg1Bmw-XHNrn1J86avNTrYTrdpJW
-aj4yuc85eLokYSHN4a2YDipo6XVd-ZoSLPHTpBEx_k_zDQOjfg
+IsImlhdCI6MTc1MTg5MjY2NH0.r2y14rJ5SG-SxcAWjMdOJBaRElv5pMSam8Q
+hVJ6ItPKjTaR3ykv4HRPY-DnR_PnZGuMLIgPtgRd1CULiSj80lQ
 ```
 
 Decoded JWT
